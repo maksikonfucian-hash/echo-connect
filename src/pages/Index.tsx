@@ -1,96 +1,95 @@
-import { useState, useEffect } from 'react';
-import { AuthScreen } from '@/components/screens/AuthScreen';
-import { ContactsScreen } from '@/components/screens/ContactsScreen';
-import { CallScreen } from '@/components/screens/CallScreen';
-import { Screen, User } from '@/types/app';
-import { Toaster } from '@/components/ui/sonner';
-import { toast } from 'sonner';
-import { useTelegramAuth, TelegramUser } from '@/hooks/useTelegramAuth';
-import { TelegramAuthData } from '@/components/TelegramLoginButton';
+import { useEffect, useState } from 'react';
+import AuthScreen from '@/components/screens/AuthScreen';
+import ContactsScreen from '@/components/screens/ContactsScreen';
+import CallScreen from '@/components/screens/CallScreen';
+import { useTelegramAuth, TelegramAuthData } from '@/hooks/useTelegramAuth';
+import { User } from '@/types/app';
+import { mockContacts } from '@/data/mockContacts';
+
+type Screen = 'auth' | 'contacts' | 'call';
 
 const Index = () => {
-  const { user, isLoading, isAuthenticated, login, logout } = useTelegramAuth();
+  const { user, loading: authLoading, error: authError, logout } = useTelegramAuth();
   const [currentScreen, setCurrentScreen] = useState<Screen>('auth');
   const [activeCallContact, setActiveCallContact] = useState<User | null>(null);
 
-  // Sync screen with auth state
+  // Синхронизируем экран с состоянием авторизации
   useEffect(() => {
-    if (!isLoading) {
-      if (isAuthenticated && currentScreen === 'auth') {
+    if (!authLoading) {
+      if (user) {
         setCurrentScreen('contacts');
-      } else if (!isAuthenticated && currentScreen !== 'auth') {
+      } else {
         setCurrentScreen('auth');
       }
     }
-  }, [isAuthenticated, isLoading, currentScreen]);
+  }, [user, authLoading]);
 
   const handleLogin = async (authData: TelegramAuthData) => {
-    const result = await login(authData);
-    if (result.success) {
-      toast.success('Успешный вход!', {
-        description: 'Добро пожаловать в VoiceCall',
-      });
-      setCurrentScreen('contacts');
-    } else {
-      toast.error('Ошибка входа', {
-        description: result.error || 'Попробуйте ещё раз',
-      });
-    }
+    console.log('Login successful:', authData);
+    // Пользователь уже установлен в useTelegramAuth
   };
 
   const handleLogout = async () => {
     await logout();
-    toast.info('Вы вышли из аккаунта');
     setCurrentScreen('auth');
   };
 
   const handleCall = (contact: User) => {
     setActiveCallContact(contact);
     setCurrentScreen('call');
-    toast('Начинаем звонок...', {
-      description: `Вызов ${contact.name}`,
-    });
   };
 
   const handleEndCall = () => {
-    if (activeCallContact) {
-      toast.info('Звонок завершён', {
-        description: `с ${activeCallContact.name}`,
-      });
-    }
     setActiveCallContact(null);
     setCurrentScreen('contacts');
   };
 
-  // Show loading state
-  if (isLoading) {
+  // Показываем лоадер во время загрузки
+  if (authLoading) {
     return (
-      <div className="max-w-md mx-auto min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Загрузка...</div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-telegram-blue border-t-transparent rounded-full mx-auto mb-3"></div>
+          <p className="text-muted-foreground">Загрузка...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Показываем ошибку авторизации
+  if (authError && currentScreen === 'auth') {
+    return (
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <div className="text-center max-w-md">
+          <p className="text-red-500 font-semibold mb-2">Ошибка авторизации</p>
+          <p className="text-sm text-muted-foreground mb-4">{authError}</p>
+          <p className="text-xs text-muted-foreground">Обновите страницу и попробуйте снова.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-background">
+    <>
       {currentScreen === 'auth' && (
-        <AuthScreen onLogin={handleLogin} isLoading={isLoading} />
+        <AuthScreen onLogin={handleLogin} isLoading={authLoading} />
       )}
-
-      {currentScreen === 'contacts' && (
-        <ContactsScreen 
-          onCall={handleCall} 
-          onLogout={handleLogout}
+      {currentScreen === 'contacts' && user && (
+        <ContactsScreen
           currentUser={user}
+          contacts={mockContacts}
+          onCall={handleCall}
+          onLogout={handleLogout}
         />
       )}
-
       {currentScreen === 'call' && activeCallContact && (
-        <CallScreen contact={activeCallContact} onEndCall={handleEndCall} />
+        <CallScreen
+          contact={activeCallContact}
+          onEndCall={handleEndCall}
+          onAcceptCall={() => setCurrentScreen('call')}
+        />
       )}
-
-      <Toaster position="top-center" />
-    </div>
+    </>
   );
 };
 
