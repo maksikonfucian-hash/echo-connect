@@ -7,7 +7,7 @@ interface AuthScreenProps {
 }
 
 // ВАЖНО: Замените на имя вашего Telegram бота (без @)
-const TELEGRAM_BOT_NAME = 'VoiceCallAuthBot';
+const TELEGRAM_BOT_NAME = 'callme_Ketchup_bot';
 
 export function AuthScreen({ onLogin, isLoading = false }: AuthScreenProps) {
   return (
