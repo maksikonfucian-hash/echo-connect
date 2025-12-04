@@ -1,88 +1,69 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { TelegramLoginButton, TelegramAuthData } from '@/components/TelegramLoginButton';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
-export interface TelegramAuthData {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  photo_url?: string;
-  auth_date: number;
-  hash: string;
+interface AuthScreenProps {
+  onLogin: (authData: TelegramAuthData) => void;
+  isLoading: boolean;
 }
 
-export function useTelegramAuth() {
-  const [user, setUser] = useState<TelegramAuthData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function AuthScreen({ onLogin, isLoading }: AuthScreenProps) {
+  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME;
 
-  useEffect(() => {
-    // Изначально не загружаем — ждём события от виджета
-    setLoading(false);
-
-    const handler = async (event: any) => {
-      const tgUser = event?.detail as TelegramAuthData | undefined;
-      if (!tgUser) {
-        console.warn('No telegram user data in event');
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        console.log('Telegram auth data received:', tgUser);
-
-        // Попытаемся вызвать Supabase function (если настроена)
-        if (supabase?.functions && typeof (supabase as any).functions.invoke === 'function') {
-          try {
-            console.log('Calling telegram-auth function...');
-            const res = await (supabase as any).functions.invoke('telegram-auth', {
-              body: JSON.stringify({ telegramUser: tgUser }),
-            });
-
-            console.log('Function response:', res);
-
-            if (res && (res as any).data) {
-              setUser((res as any).data);
-              console.log('User set from function response:', (res as any).data);
-            } else {
-              setUser(tgUser);
-            }
-          } catch (fnErr) {
-            console.warn('telegram-auth function invoke error:', fnErr);
-            setUser(tgUser);
-          }
-        } else {
-          console.log('Supabase functions not available, using Telegram data directly');
-          setUser(tgUser);
-        }
-      } catch (err) {
-        console.error('useTelegramAuth handler error:', err);
-        setError(err instanceof Error ? err.message : 'Authentication failed');
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    window.addEventListener('telegram-auth', handler as EventListener);
-    return () => window.removeEventListener('telegram-auth', handler as EventListener);
-  }, []);
-
-  const logout = async () => {
-    setUser(null);
-    setError(null);
-    try {
-      if (supabase?.auth && typeof supabase.auth.signOut === 'function') {
-        await supabase.auth.signOut();
-      }
-    } catch (e) {
-      console.warn('Logout error:', e);
-    }
+  const handleAuth = (user: TelegramAuthData) => {
+    // Dispatch custom event for the hook
+    const event = new CustomEvent('telegram-auth', { detail: user });
+    window.dispatchEvent(event);
+    // Also call onLogin for the parent
+    onLogin(user);
   };
 
-  return { user, loading, error, logout };
+  if (!botUsername) {
+    return (
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Ошибка конфигурации</CardTitle>
+            <CardDescription>
+              Не указан username Telegram-бота в переменных окружения.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-screen px-4 bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold text-gray-900">
+            Echo Connect
+          </CardTitle>
+          <CardDescription>
+            Войдите через Telegram для доступа к звонкам
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <TelegramLoginButton
+              botName={botUsername}
+              onAuth={handleAuth}
+              buttonSize="large"
+              usePic={true}
+            />
+          )}
+          <p className="text-sm text-gray-600 text-center">
+            Авторизуйтесь, чтобы начать общение
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
-export default useTelegramAuth;
+export default AuthScreen;
