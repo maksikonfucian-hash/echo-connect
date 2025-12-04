@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import AuthScreen from '@/components/screens/AuthScreen';
-import { ContactsScreen } from '@/components/screens/ContactsScreen'; // <-- Именованный импорт
-import CallScreen from '@/components/screens/CallScreen';
-import { useTelegramAuth, TelegramAuthData } from '@/hooks/useTelegramAuth';
+import { ContactsScreen } from '@/components/screens/ContactsScreen';
+import { CallScreen } from '@/components/screens/CallScreen';
+import { useTelegramAuth, TelegramAuthData, TelegramUser } from '@/hooks/useTelegramAuth';
 import { User } from '@/types/app';
-import { mockContacts } from '@/data/mockContacts';
 
 type Screen = 'auth' | 'contacts' | 'call';
 
@@ -14,11 +13,8 @@ const Index = () => {
   const [activeCallContact, setActiveCallContact] = useState<User | null>(null);
 
   useEffect(() => {
-    if (user) {
-      setCurrentScreen('contacts');
-    } else {
-      setCurrentScreen('auth');
-    }
+    if (user) setCurrentScreen('contacts');
+    else setCurrentScreen('auth');
   }, [user]);
 
   const handleLogin = async (authData: TelegramAuthData) => {
@@ -54,13 +50,10 @@ const Index = () => {
 
   return (
     <>
-      {currentScreen === 'auth' && (
-        <AuthScreen onLogin={handleLogin} isLoading={authLoading} />
-      )}
+      {currentScreen === 'auth' && <AuthScreen onLogin={handleLogin} isLoading={authLoading} />}
       {currentScreen === 'contacts' && user && (
         <ContactsScreen
-          currentUser={user as User}
-          contacts={mockContacts}
+          currentUser={user as TelegramUser}
           onCall={handleCall}
           onLogout={handleLogout}
         />

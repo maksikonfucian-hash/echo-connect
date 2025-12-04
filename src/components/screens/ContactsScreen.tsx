@@ -17,7 +17,6 @@ export function ContactsScreen({ onCall, onLogout, currentUser }: ContactsScreen
   const [contacts, setContacts] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch users from database
   useEffect(() => {
     const fetchContacts = async () => {
       setIsLoading(true);
@@ -32,13 +31,12 @@ export function ContactsScreen({ onCall, onLogout, currentUser }: ContactsScreen
           return;
         }
 
-        // Transform database users to User type
         const transformedUsers: User[] = (data || []).map(dbUser => ({
           id: dbUser.id,
           name: [dbUser.first_name, dbUser.last_name].filter(Boolean).join(' '),
           username: dbUser.username || `user_${dbUser.telegram_id}`,
           avatar: dbUser.photo_url || undefined,
-          status: 'offline' as const, // Default to offline, would need realtime for actual status
+          status: 'offline' as const,
           telegramId: dbUser.telegram_id,
         }));
 
@@ -52,7 +50,6 @@ export function ContactsScreen({ onCall, onLogout, currentUser }: ContactsScreen
 
     fetchContacts();
 
-    // Subscribe to realtime updates
     const channel = supabase
       .channel('telegram_users_changes')
       .on(
@@ -78,7 +75,6 @@ export function ContactsScreen({ onCall, onLogout, currentUser }: ContactsScreen
   const offlineContacts = filteredContacts.filter(c => c.status !== 'online');
 
   const handleInvite = () => {
-    // Открытие Telegram Share Link
     const shareText = 'Присоединяйся к VoiceCall для аудиозвонков!';
     const shareUrl = 'https://t.me/voicecall_app';
     window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
@@ -152,7 +148,7 @@ export function ContactsScreen({ onCall, onLogout, currentUser }: ContactsScreen
               </section>
             )}
 
-            {/* Offline/All Users Section */}
+            {/* Offline Section */}
             {offlineContacts.length > 0 && (
               <section className="mb-6 animate-fade-in">
                 <div className="flex items-center gap-2 mb-3">
@@ -193,7 +189,7 @@ export function ContactsScreen({ onCall, onLogout, currentUser }: ContactsScreen
         )}
       </main>
 
-      {/* Footer - Invite Button */}
+      {/* Footer */}
       <footer className="sticky bottom-0 p-4 bg-background/95 backdrop-blur-sm border-t border-border">
         <Button
           onClick={handleInvite}
