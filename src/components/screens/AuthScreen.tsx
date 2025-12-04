@@ -1,11 +1,15 @@
-import { Button } from '@/components/ui/button';
-import { Send } from 'lucide-react';
+import { TelegramLoginButton, TelegramAuthData } from '@/components/TelegramLoginButton';
+import { Loader2 } from 'lucide-react';
 
 interface AuthScreenProps {
-  onLogin: () => void;
+  onLogin: (authData: TelegramAuthData) => void;
+  isLoading?: boolean;
 }
 
-export function AuthScreen({ onLogin }: AuthScreenProps) {
+// ВАЖНО: Замените на имя вашего Telegram бота (без @)
+const TELEGRAM_BOT_NAME = 'VoiceCallAuthBot';
+
+export function AuthScreen({ onLogin, isLoading = false }: AuthScreenProps) {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* Header Area */}
@@ -55,19 +59,27 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
           </div>
         </div>
 
-        {/* Login Button */}
-        <Button
-          onClick={onLogin}
-          variant="telegram"
-          size="xl"
-          className="w-full"
-        >
-          <Send className="mr-2" />
-          Войти через Telegram
-        </Button>
+        {/* Telegram Login Widget */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            <span className="ml-2 text-muted-foreground">Авторизация...</span>
+          </div>
+        ) : (
+          <TelegramLoginButton
+            botName={TELEGRAM_BOT_NAME}
+            onAuth={onLogin}
+            buttonSize="large"
+            usePic={true}
+          />
+        )}
 
         <p className="text-muted-foreground/60 text-xs text-center mt-4">
           Авторизуясь, вы соглашаетесь с условиями использования
+        </p>
+        
+        <p className="text-muted-foreground/40 text-xs text-center mt-2">
+          Для работы необходимо настроить Telegram бота
         </p>
       </div>
     </div>

@@ -1,20 +1,75 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ContactCard } from '@/components/ContactCard';
 import { User } from '@/types/app';
-import { mockContacts } from '@/data/mockContacts';
-import { Search, Share2, LogOut, Users } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Search, Share2, LogOut, Users, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { TelegramUser } from '@/hooks/useTelegramAuth';
 
 interface ContactsScreenProps {
   onCall: (contact: User) => void;
   onLogout: () => void;
+  currentUser: TelegramUser | null;
 }
 
-export function ContactsScreen({ onCall, onLogout }: ContactsScreenProps) {
+export function ContactsScreen({ onCall, onLogout, currentUser }: ContactsScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [contacts, setContacts] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredContacts = mockContacts.filter(contact =>
+  // Fetch users from database
+  useEffect(() => {
+    const fetchContacts = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('telegram_users')
+          .select('*')
+          .neq('telegram_id', currentUser?.telegram_id || 0);
+
+        if (error) {
+          console.error('Error fetching contacts:', error);
+          return;
+        }
+
+        // Transform database users to User type
+        const transformedUsers: User[] = (data || []).map(dbUser => ({
+          id: dbUser.id,
+          name: [dbUser.first_name, dbUser.last_name].filter(Boolean).join(' '),
+          username: dbUser.username || `user_${dbUser.telegram_id}`,
+          avatar: dbUser.photo_url || undefined,
+          status: 'offline' as const, // Default to offline, would need realtime for actual status
+          telegramId: dbUser.telegram_id,
+        }));
+
+        setContacts(transformedUsers);
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchContacts();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel('telegram_users_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'telegram_users' },
+        () => {
+          fetchContacts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.telegram_id]);
+
+  const filteredContacts = contacts.filter(contact =>
     contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     contact.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -34,7 +89,14 @@ export function ContactsScreen({ onCall, onLogout }: ContactsScreenProps) {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border px-4 py-4">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-foreground">Контакты</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Контакты</h1>
+            {currentUser && (
+              <p className="text-sm text-muted-foreground">
+                {currentUser.first_name} {currentUser.last_name}
+              </p>
+            )}
+          </div>
           <Button
             onClick={onLogout}
             variant="ghost"
@@ -60,61 +122,74 @@ export function ContactsScreen({ onCall, onLogout }: ContactsScreenProps) {
 
       {/* Content */}
       <main className="flex-1 px-4 py-4 overflow-y-auto">
-        {/* Online Section */}
-        {onlineContacts.length > 0 && (
-          <section className="mb-6 animate-fade-in">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-2 h-2 rounded-full bg-online" />
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Онлайн ({onlineContacts.length})
-              </h2>
-            </div>
-            <div className="space-y-3">
-              {onlineContacts.map((contact, index) => (
-                <div
-                  key={contact.id}
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <ContactCard contact={contact} onCall={onCall} />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Offline Section */}
-        {offlineContacts.length > 0 && (
-          <section className="mb-6 animate-fade-in">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-2 h-2 rounded-full bg-offline" />
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Не в сети ({offlineContacts.length})
-              </h2>
-            </div>
-            <div className="space-y-3">
-              {offlineContacts.map((contact, index) => (
-                <div
-                  key={contact.id}
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${(onlineContacts.length + index) * 50}ms` }}
-                >
-                  <ContactCard contact={contact} onCall={onCall} />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Empty State */}
-        {filteredContacts.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
-            <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <p className="text-muted-foreground mb-2">Контакты не найдены</p>
-            <p className="text-sm text-muted-foreground/70">Попробуйте изменить поисковый запрос</p>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Загрузка контактов...</p>
           </div>
+        ) : (
+          <>
+            {/* Online Section */}
+            {onlineContacts.length > 0 && (
+              <section className="mb-6 animate-fade-in">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-2 h-2 rounded-full bg-online" />
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Онлайн ({onlineContacts.length})
+                  </h2>
+                </div>
+                <div className="space-y-3">
+                  {onlineContacts.map((contact, index) => (
+                    <div
+                      key={contact.id}
+                      className="animate-slide-up"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <ContactCard contact={contact} onCall={onCall} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Offline/All Users Section */}
+            {offlineContacts.length > 0 && (
+              <section className="mb-6 animate-fade-in">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-2 h-2 rounded-full bg-offline" />
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Пользователи ({offlineContacts.length})
+                  </h2>
+                </div>
+                <div className="space-y-3">
+                  {offlineContacts.map((contact, index) => (
+                    <div
+                      key={contact.id}
+                      className="animate-slide-up"
+                      style={{ animationDelay: `${(onlineContacts.length + index) * 50}ms` }}
+                    >
+                      <ContactCard contact={contact} onCall={onCall} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Empty State */}
+            {filteredContacts.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
+                <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+                  <Users className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground mb-2">
+                  {searchQuery ? 'Контакты не найдены' : 'Пока нет других пользователей'}
+                </p>
+                <p className="text-sm text-muted-foreground/70">
+                  {searchQuery ? 'Попробуйте изменить поисковый запрос' : 'Пригласите друзей в приложение!'}
+                </p>
+              </div>
+            )}
+          </>
         )}
       </main>
 
