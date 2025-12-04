@@ -2,9 +2,10 @@ export interface User {
   id: string;
   name: string;
   username: string;
-  avatar: string;
+  avatar?: string;
   status: 'online' | 'offline' | 'recently';
   lastSeen?: Date;
+  telegramId?: number;
 }
 
 export type CallStatus = 'idle' | 'connecting' | 'ringing' | 'active' | 'ended';
