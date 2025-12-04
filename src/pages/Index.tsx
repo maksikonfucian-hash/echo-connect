@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import AuthScreen from '@/components/screens/AuthScreen';
-import ContactsScreen from '@/components/screens/ContactsScreen';
+import { ContactsScreen } from '@/components/screens/ContactsScreen'; // <-- Именованный импорт
 import CallScreen from '@/components/screens/CallScreen';
 import { useTelegramAuth, TelegramAuthData } from '@/hooks/useTelegramAuth';
 import { User } from '@/types/app';
@@ -13,7 +13,6 @@ const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('auth');
   const [activeCallContact, setActiveCallContact] = useState<User | null>(null);
 
-  // Синхронизируем экран с состоянием авторизации
   useEffect(() => {
     if (user) {
       setCurrentScreen('contacts');
@@ -24,7 +23,6 @@ const Index = () => {
 
   const handleLogin = async (authData: TelegramAuthData) => {
     console.log('Login successful:', authData);
-    // Пользователь уже установлен в useTelegramAuth
   };
 
   const handleLogout = async () => {
@@ -42,7 +40,6 @@ const Index = () => {
     setCurrentScreen('contacts');
   };
 
-  // Показываем ошибку авторизации
   if (authError && currentScreen === 'auth') {
     return (
       <div className="flex items-center justify-center min-h-screen px-4">
