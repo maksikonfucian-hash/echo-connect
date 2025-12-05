@@ -75,8 +75,8 @@ export function ContactsScreen({ onCall, onLogout, currentUser }: ContactsScreen
   const offlineContacts = filteredContacts.filter(c => c.status !== 'online');
 
   const handleInvite = () => {
-    const shareText = 'Присоединяйся к VoiceCall для аудиозвонков!';
-    const shareUrl = 'https://t.me/voicecall_app';
+    const shareText = 'Присоединяйся к Echo Connect для видеозвонков!';
+    const shareUrl = window.location.origin;
     window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
   };
 
