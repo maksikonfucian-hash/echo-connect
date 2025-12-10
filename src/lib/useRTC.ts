@@ -1,7 +1,21 @@
 // src/lib/useRTC.ts
 import { useRef, useState } from 'react';
 
-export function useRTC(signaling, localAudioElRef) {
+interface SignalingMessage {
+  type: string;
+  from: string;
+  to: string;
+  sdp?: RTCSessionDescriptionInit;
+  candidate?: RTCIceCandidateInit;
+}
+
+interface Signaling {
+  send: (msg: SignalingMessage) => void;
+  userId: string;
+  currentTarget: string;
+}
+
+export function useRTC(signaling: Signaling, localAudioElRef: React.RefObject<HTMLAudioElement>) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<'idle'|'calling'|'in-call'|'ringing'|'connecting'>('idle');
@@ -93,8 +107,8 @@ export function useRTC(signaling, localAudioElRef) {
   }
 
   // Helper placeholders — will be injected by caller
-  function signalingUserId(){ return (signaling as any).userId; }
-  function currentTargetId(){ return (signaling as any).currentTarget; }
+  function signalingUserId(){ return signaling.userId; }
+  function currentTargetId(){ return signaling.currentTarget; }
 
   return { call, handleOffer, handleAnswer, handleIce, hangup, status, setStatus };
 }

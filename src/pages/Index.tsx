@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import AuthScreen from '@/components/screens/AuthScreen';
 import { ContactsScreen } from '@/components/screens/ContactsScreen';
 import { CallScreen } from '@/components/screens/CallScreen';
-import { useTelegramAuth, TelegramAuthData, TelegramUser } from '@/hooks/useTelegramAuth';
+import { useTelegramAuth, TelegramUser } from '@/hooks/useTelegramAuth';
 import { User } from '@/types/app';
 
 type Screen = 'auth' | 'contacts' | 'call';
@@ -17,7 +17,7 @@ const Index = () => {
     else setCurrentScreen('auth');
   }, [user]);
 
-  const handleLogin = async (authData: TelegramAuthData) => {
+  const handleLogin = async (authData: TelegramUser) => {
     console.log('Login successful:', authData);
   };
 

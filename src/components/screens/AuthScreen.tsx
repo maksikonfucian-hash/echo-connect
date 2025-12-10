@@ -60,6 +60,10 @@ export function AuthScreen({ onLogin, isLoading }: AuthScreenProps) {
           <p className="text-sm text-gray-600 text-center">
             Авторизуйтесь, чтобы начать общение
           </p>
+          <p className="text-xs text-gray-500 text-center mt-2">
+            Примечание: Убедитесь, что в настройках Telegram-бота установлен домен веб-приложения через /setdomain в BotFather.
+            Для локальной разработки используйте ngrok и установите HTTPS URL.
+          </p>
         </CardContent>
       </Card>
     </div>

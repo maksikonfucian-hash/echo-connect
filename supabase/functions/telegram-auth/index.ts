@@ -2,8 +2,9 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('FRONTEND_URL') || 'http://localhost:8080',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface TelegramAuthData {
@@ -14,6 +15,7 @@ interface TelegramAuthData {
   photo_url?: string;
   auth_date: number;
   hash: string;
+  referral_code?: string;
 }
 
 async function verifyTelegramAuth(authData: TelegramAuthData, botToken: string): Promise<boolean> {
@@ -84,6 +86,17 @@ serve(async (req) => {
     const authData: TelegramAuthData = await req.json();
     console.log('Received auth data for telegram_id:', authData.id);
 
+    // Input validation
+    if (!authData.id || typeof authData.id !== 'number' ||
+        !authData.first_name || typeof authData.first_name !== 'string' ||
+        typeof authData.auth_date !== 'number' ||
+        !authData.hash || typeof authData.hash !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid input data' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verify the Telegram auth data
     const isValid = await verifyTelegramAuth(authData, botToken);
     if (!isValid) {
@@ -131,6 +144,20 @@ serve(async (req) => {
 
     console.log('User saved/updated successfully:', user.id);
 
+    // Handle referral if provided
+    if (authData.referral_code) {
+      try {
+        await supabase.rpc('handle_referral_signup', {
+          p_telegram_id: authData.id,
+          p_referral_code: authData.referral_code
+        });
+        console.log('Referral processed for user:', user.id);
+      } catch (refErr) {
+        console.warn('Referral processing failed:', refErr);
+        // Don't fail auth if referral fails
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -141,6 +168,7 @@ serve(async (req) => {
           last_name: user.last_name,
           username: user.username,
           photo_url: user.photo_url,
+          referral_code: user.referral_code,
         },
         session_token: sessionToken,
       }),

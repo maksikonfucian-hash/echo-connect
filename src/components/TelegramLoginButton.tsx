@@ -56,6 +56,7 @@ export function TelegramLoginButton({
     script.setAttribute('data-size', buttonSize);
     script.setAttribute('data-onauth', 'TelegramLoginWidget.onAuth(user)');
     script.setAttribute('data-request-access', requestAccess);
+    script.setAttribute('data-auth-url', window.location.origin);
     if (usePic) {
       script.setAttribute('data-userpic', 'true');
     }
