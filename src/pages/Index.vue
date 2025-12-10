@@ -1,14 +1,12 @@
 <template>
-  <div v-if="authError && currentScreen === 'auth'" class="flex items-center justify-center min-h-screen px-4">
-    <div class="text-center max-w-md">
-      <p class="text-red-500 font-semibold mb-2">Ошибка авторизации</p>
-      <p class="text-sm text-muted-foreground mb-4">{{ authError }}</p>
-      <p class="text-xs text-muted-foreground">Обновите страницу и попробуйте снова.</p>
-    </div>
+  <div>
+    <h1>Echo Connect Debug</h1>
+    <p>Current screen: {{ currentScreen }}</p>
+    <p>User: {{ user ? user.first_name : 'None' }}</p>
+    <p>Loading: {{ authLoading }}</p>
+    <p>Error: {{ authError }}</p>
+    <button @click="handleLogout" v-if="user">Logout</button>
   </div>
-  <AuthScreen v-else-if="currentScreen === 'auth'" :on-login="handleLogin" :is-loading="authLoading" />
-  <ContactsScreen v-else-if="currentScreen === 'contacts' && user" :current-user="user" :on-call="handleCall" :on-logout="handleLogout" />
-  <CallScreen v-else-if="currentScreen === 'call' && activeCallContact" :contact="activeCallContact" :on-end-call="handleEndCall" :on-accept-call="() => currentScreen = 'call'" />
 </template>
 
 <script setup lang="ts">
