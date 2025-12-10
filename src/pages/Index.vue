@@ -14,8 +14,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import AuthScreen from '@/components/screens/AuthScreen.vue'
-import { ContactsScreen } from '@/components/screens/ContactsScreen.vue'
-import { CallScreen } from '@/components/screens/CallScreen.vue'
+import ContactsScreen from '@/components/screens/ContactsScreen.vue'
+import CallScreen from '@/components/screens/CallScreen.vue'
 import { useTelegramAuth, TelegramUser } from '@/hooks/useTelegramAuth'
 import { User } from '@/types/app'
 
